@@ -1,6 +1,6 @@
 import re
 
-def is_valid_email(email):
+def is_valid(email):
     # determine whether invalid start of string (.. is illegal)
     no_dot_chars = r'[\w_%+-]'
     unquoted_local =  rf'{no_dot_chars}+(?:\.{no_dot_chars}+)*'
