@@ -12,7 +12,7 @@ def label_check(label : str) -> bool:
 
 def domain_check(domain: str) -> bool:
     domain_len = len (domain)
-    if (domain_len < 0 or domain_len> 255):
+    if (domain_len < 1 or domain_len> 255):
         return False
     
     labels = domain.split('.')
@@ -31,7 +31,7 @@ def domain_check(domain: str) -> bool:
     
     return True 
 
-domains = ["example.com", "-example.com", "example-.com", "-example-.com-"]
+domains = ["example.com", "-example.com", "example-.com", "-example-.com-", ""]
 for domain in domains:
     if domain_check(domain):
         print("pass")
