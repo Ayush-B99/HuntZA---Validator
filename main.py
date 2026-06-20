@@ -4,6 +4,7 @@ import threading
 import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 def is_valid(email: str) -> bool:
+    email = normalize_email(email)
     if ("@" not in email):
         return False
 
@@ -29,6 +30,62 @@ def normalize_domain(domain):
     for sep in ("\u3002", "\uff0e", "\uff61"):
         domain = domain.replace(sep, ".")
     return unicodedata.normalize("NFC", domain)
+
+_IGNORE_CHARS = {"\u00ad", "\u200b", "\u2060", "\ufeff"} | {chr(c) for c in range(0xfe00, 0xfe10)}
+
+def normalize_email(email):
+    email = email.replace("\uff20", "@")
+    out = []
+    for c in email:
+        if c in _IGNORE_CHARS:
+            continue
+        if unicodedata.category(c) == "Zs":
+            out.append(" ")
+        else:
+            out.append(c)
+    return "".join(out)
+
+def _last_non_nsm(types):
+    for t in reversed(types):
+        if t != "NSM":
+            return t
+    return None
+
+def _passes_bidi(label):
+    if not label:
+        return True
+    types = [unicodedata.bidirectional(c) for c in label]
+    first = types[0]
+    if first in ("R", "AL"):
+        allowed = {"R", "AL", "AN", "EN", "ES", "CS", "ET", "ON", "BN", "NSM"}
+        if any(t not in allowed for t in types):
+            return False
+        if _last_non_nsm(types) not in ("R", "AL", "EN", "AN"):
+            return False
+        if "EN" in types and "AN" in types:
+            return False
+        return True
+    if first == "L":
+        allowed = {"L", "EN", "ES", "CS", "ET", "ON", "BN", "NSM"}
+        if any(t not in allowed for t in types):
+            return False
+        if _last_non_nsm(types) not in ("L", "EN"):
+            return False
+        return True
+    return False
+
+def bidi_ok(domain):
+    labels = []
+    for lbl in domain.split("."):
+        if lbl[:4].lower() == "xn--":
+            decoded = punycode_decode(lbl[4:])
+            labels.append(decoded if decoded else lbl)
+        else:
+            labels.append(lbl)
+    has_rtl = any(unicodedata.bidirectional(c) in ("R", "AL", "AN") for lbl in labels for c in lbl)
+    if not has_rtl:
+        return True
+    return all(_passes_bidi(lbl) for lbl in labels)
 def is_valid_RFC(email):
     # determine whether invalid start of string (.. is illegal)
     no_dot_chars = r"[\w!#$%&'*+/=?^_`{|}~-]"
@@ -133,6 +190,8 @@ def is_valid_ipv6(text):
     return len(groups) == 8
 
 def is_valid_idna(domain):
+    if not bidi_ok(domain):
+        return False
     for label in domain.split("."):
         if label == "":
             return False
