@@ -86,25 +86,34 @@ def bidi_ok(domain):
     if not has_rtl:
         return True
     return all(_passes_bidi(lbl) for lbl in labels)
+def _build_marks():
+    out, start, prev = [], None, None
+    for cp in range(0x300, 0x20000):
+        if unicodedata.category(chr(cp))[0] == "M":
+            if start is None:
+                start = cp
+            prev = cp
+        elif start is not None:
+            out.append((start, prev))
+            start = None
+    if start is not None:
+        out.append((start, prev))
+    return "".join("\\U%08x" % a if a == b else "\\U%08x-\\U%08x" % (a, b) for a, b in out)
+
+_MARKS = _build_marks()
+_LOCAL_CHARS = r"[\w!#$%&'*+/=?^_`{|}~" + _MARKS + "-]"
+_QUOTED = r'"(?:[^"\\]|\\.)*"'
+_UNQUOTED = _LOCAL_CHARS + r"+(?:\." + _LOCAL_CHARS + r"+)*"
+_LOCAL_PART = r"(?:" + _UNQUOTED + r"|" + _QUOTED + r")"
+_DCHAR = r"(?:[^\W_]|[" + _MARKS + r"])"
+_TLDCHAR = r"(?:[^\W\d_]|[" + _MARKS + r"])"
+_LABEL = _DCHAR + r"(?:(?:" + _DCHAR + r"|-)*" + _DCHAR + r")?"
+_DOMAIN_PART = _LABEL + r"(?:\." + _LABEL + r")*\.(?:" + _TLDCHAR + r"{2,}|xn--[a-zA-Z0-9]{2,})"
+_RFC_RE = re.compile(r"^" + _LOCAL_PART + r"@" + _DOMAIN_PART + r"$", re.UNICODE)
+_LOCAL_RE = re.compile(r"^" + _LOCAL_PART + r"$", re.UNICODE)
+
 def is_valid_RFC(email):
-    # determine whether invalid start of string (.. is illegal)
-    no_dot_chars = r"[\w!#$%&'*+/=?^_`{|}~-]"
-    unquoted_local =  rf'{no_dot_chars}+(?:\.{no_dot_chars}+)*'
-    
-    # if wrapped in "" not as strict by RFC but it must end in " or it is illegal
-    quoted_content = r'(?:[^"\\]|\\.)*'
-    quoted_local = rf'"{quoted_content}"'
-    # or for if "" or not
-    local_part = rf'(?:{unquoted_local}|{quoted_local})'
-    # FIX: Strictly enforce Unicode letters/digits and hyphens only
-    domain_char = r'[^\W_]'
-    domain_label = rf"{domain_char}(?:(?:[^\W_]|-)*{domain_char})?"
-    tld = r"(?:[^\W\d_]{2,}|xn--[a-zA-Z0-9]{2,})"
-    domain_part = rf"{domain_label}(?:\.{domain_label})*\.{tld}"
-    pattern = rf'^{local_part}@{domain_part}$'
-    if re.match(pattern, email, re.UNICODE):
-        return True
-    return False
+    return bool(_RFC_RE.match(email))
 test_cases = {
     # Valid Cases
     "café@müller.de": True,
@@ -150,9 +159,7 @@ def is_valid_email(email):
 def is_valid_local(local):
     if len(local.encode("utf-8")) > 64:
         return False
-    unquoted = r"[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*"
-    quoted = r'"(?:[^"\\]|\\.)*"'
-    return bool(re.match(rf"^(?:{unquoted}|{quoted})$", local, re.UNICODE))
+    return bool(_LOCAL_RE.match(local))
 
 def is_valid_ip_literal(domain):
     inner = domain[1:-1]
