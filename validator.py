@@ -20,7 +20,7 @@ def is_valid_email(email):
 
     pattern = rf'^{local_part}@{domain_part}$'
 
-    if re.match(email, pattern, re.UNICODE):
+    if re.match(pattern, email, re.UNICODE):
         return True
     return False
 
