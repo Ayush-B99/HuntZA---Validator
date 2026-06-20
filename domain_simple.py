@@ -3,7 +3,7 @@ import unicodedata
 
 
 def label_check(label : str) -> bool:
-    label_len = len(label.encode("utf-8"))
+    label_len = len(label)
     if  (label_len < 1 or label_len > 63):
         return False
     if(label.startswith("-") or label.endswith("-")):
@@ -11,7 +11,7 @@ def label_check(label : str) -> bool:
     return True
 
 def domain_check(domain: str) -> bool:
-    domain_len = len (domain.encode("utf-8"))
+    domain_len = len (domain.encode("utf-8")) ## idna neded 
     if (domain_len < 1 or domain_len> 255):
         return False
     
