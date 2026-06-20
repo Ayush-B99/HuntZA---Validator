@@ -11,7 +11,7 @@ def label_check(label : str) -> bool:
     return True
 
 def domain_check(domain: str) -> bool:
-    domain_len = len (domain)
+    domain_len = len (domain.encode("utf-8"))
     if (domain_len < 1 or domain_len> 255):
         return False
     
