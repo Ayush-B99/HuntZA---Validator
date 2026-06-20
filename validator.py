@@ -1,6 +1,5 @@
 import re
-
-import re
+import sys
 
 def is_valid(email):
     # determine whether invalid start of string (.. is illegal)
@@ -50,16 +49,16 @@ test_cases = {
 passed_tests = 0
 failed_tests = 0
 
-print("🚀 Starting Basic Test Suite Run...\n")
+print(" Starting Basic Test Suite Run...\n")
 
 for email, expected in test_cases.items():
     actual_result = is_valid(email)
     
     if actual_result == expected:
-        print(f"✅ PASS | '{email}' behaved as expected ({expected}).")
+        print(f" PASS | '{email}' behaved as expected ({expected}).")
         passed_tests += 1
     else:
-        print(f"❌ FAIL | '{email}' expected {expected}, but returned {actual_result}.")
+        print(f" FAIL | '{email}' expected {expected}, but returned {actual_result}.")
         failed_tests += 1
 
 # Summary Blocks
@@ -70,8 +69,38 @@ print(f"Failed: {failed_tests}")
 
 # Exit protocol to mirror structural frameworks
 if failed_tests > 0:
-    print("\n🚨 Build Status: FAILED")
+    print("\n Build Status: FAILED")
 else:
-    print("\n🎉 Build Status: SUCCESS")
+    print("\n Build Status: SUCCESS")
 
+
+def is_valid_email(email):
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$' #basic regex for emails
+    local,domain = email.split('@',1)
+    labels = domain.split('.')
+
+    tld = labels[-1]
+    if tld.isdigit():
+        return False
+
+    if re.match(pattern, email) and ((len(local.encode('utf-8'))) <= 64 and (len(domain.encode('utf-8')) <= 255)):
+        return True
+    else:
+        return False
+
+    if(labels.startswith("-") and labels.endswith("-")):
+        return False
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python3 validator.py <email_address>")
+        sys.exit(1)
+
+input_email = sys.argv[1] 
+
+if is_valid_email(input_email):
+     print(f"true.")
+else: 
+    print(f"false")
 
