@@ -145,117 +145,19 @@ def is_valid_idna(domain):
                 return False
     return True
 
-_PN_BASE, _PN_TMIN, _PN_TMAX = 36, 1, 26
-_PN_SKEW, _PN_DAMP = 38, 700
-_PN_INITIAL_BIAS, _PN_INITIAL_N = 72, 128
-
-def _pn_adapt(delta, numpoints, firsttime):
-    delta = delta // _PN_DAMP if firsttime else delta // 2
-    delta += delta // numpoints
-    k = 0
-    while delta > ((_PN_BASE - _PN_TMIN) * _PN_TMAX) // 2:
-        delta //= (_PN_BASE - _PN_TMIN)
-        k += _PN_BASE
-    return k + (((_PN_BASE - _PN_TMIN + 1) * delta) // (delta + _PN_SKEW))
-
-def _pn_digit(cp):
-    if 0x41 <= cp <= 0x5A:
-        return cp - 0x41
-    if 0x61 <= cp <= 0x7A:
-        return cp - 0x61
-    if 0x30 <= cp <= 0x39:
-        return cp - 0x30 + 26
-    return None
-
-def _pn_char(d):
-    return chr(d + 0x61) if d < 26 else chr(d - 26 + 0x30)
-
-def _pn_threshold(k, bias):
-    if k <= bias:
-        return _PN_TMIN
-    if k >= bias + _PN_TMAX:
-        return _PN_TMAX
-    return k - bias
-
 def punycode_decode(s):
     try:
-        output = []
-        delim = s.rfind("-")
-        if delim >= 0:
-            for c in s[:delim]:
-                if ord(c) >= 0x80:
-                    return None
-                output.append(c)
-            pos = delim + 1
-        else:
-            pos = 0
-        n, i, bias = _PN_INITIAL_N, 0, _PN_INITIAL_BIAS
-        while pos < len(s):
-            oldi, w, k = i, 1, _PN_BASE
-            while True:
-                if pos >= len(s):
-                    return None
-                digit = _pn_digit(ord(s[pos]))
-                pos += 1
-                if digit is None:
-                    return None
-                if digit > (0x7FFFFFFF - i) // w:
-                    return None
-                i += digit * w
-                t = _pn_threshold(k, bias)
-                if digit < t:
-                    break
-                w *= (_PN_BASE - t)
-                k += _PN_BASE
-            out_len = len(output) + 1
-            bias = _pn_adapt(i - oldi, out_len, oldi == 0)
-            n += i // out_len
-            i %= out_len
-            if n < 0x80:
-                return None
-            output.insert(i, chr(n))
-            i += 1
-        return "".join(output)
+        return s.encode("ascii").decode("punycode")
     except Exception:
         return None
 
 def punycode_encode(label):
     try:
-        cps = [ord(c) for c in label]
-        basic = [c for c in label if ord(c) < 0x80]
-        out = list(basic)
-        h = b = len(basic)
-        if b:
-            out.append("-")
-        n, delta, bias = _PN_INITIAL_N, 0, _PN_INITIAL_BIAS
-        total = len(cps)
-        while h < total:
-            m = min(cp for cp in cps if cp >= n)
-            if m - n > (0x7FFFFFFF - delta) // (h + 1):
-                return None
-            delta += (m - n) * (h + 1)
-            n = m
-            for cp in cps:
-                if cp < n:
-                    delta += 1
-                elif cp == n:
-                    q, k = delta, _PN_BASE
-                    while True:
-                        t = _pn_threshold(k, bias)
-                        if q < t:
-                            break
-                        out.append(_pn_char(t + (q - t) % (_PN_BASE - t)))
-                        q = (q - t) // (_PN_BASE - t)
-                        k += _PN_BASE
-                    out.append(_pn_char(q))
-                    bias = _pn_adapt(delta, h + 1, h == b)
-                    delta = 0
-                    h += 1
-            delta += 1
-            n += 1
-        return "".join(out)
+        return label.encode("punycode").decode("ascii")
     except Exception:
         return None
+
+
 class RateLimiter:
     def __init__(self, max_calls=5, period=1.0):
         self.max_calls = max_calls
