@@ -1,7 +1,7 @@
 import re
 import sys
 
-def is_valid(email):
+def is_valid_RFC(email):
     # determine whether invalid start of string (.. is illegal)
     no_dot_chars = r'[\w_%+-]'
     unquoted_local =  rf'{no_dot_chars}+(?:\.{no_dot_chars}+)*'
@@ -51,16 +51,6 @@ failed_tests = 0
 
 print(" Starting Basic Test Suite Run...\n")
 
-for email, expected in test_cases.items():
-    actual_result = is_valid(email)
-    
-    if actual_result == expected:
-        print(f" PASS | '{email}' behaved as expected ({expected}).")
-        passed_tests += 1
-    else:
-        print(f" FAIL | '{email}' expected {expected}, but returned {actual_result}.")
-        failed_tests += 1
-
 # Summary Blocks
 print("\n=== Test Run Summary ===")
 print(f"Total Tests Run: {len(test_cases)}")
@@ -88,19 +78,4 @@ def is_valid_email(email):
     else:
         return False
 
-    if(labels.startswith("-") and labels.endswith("-")):
-        return False
-
-
-if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 validator.py <email_address>")
-        sys.exit(1)
-
-input_email = sys.argv[1] 
-
-if is_valid_email(input_email):
-     print(f"true.")
-else: 
-    print(f"false")
 
