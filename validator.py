@@ -13,8 +13,10 @@ def is_valid_email(email):
     local_part = rf'(?:{unquoted_local}|{quoted_local})'
 
     # characters only no numbers or underscores etc
-    domain_label = r"[\w](?:[\w-]*[\w])?"
-    tld = r"[^\W\d_]{2,}"
+    domain_char = r'[^\W_]'
+    domain_label = rf"{domain_char}(?:[\w-]*{domain_char})?"
+
+    tld = r"(?:[^\W\d_]{2,}|xn--[a-zA-Z0-9]{2,})"
 
     domain_part = rf"{domain_label}(?:\.{domain_label})*\.{tld}"
 
