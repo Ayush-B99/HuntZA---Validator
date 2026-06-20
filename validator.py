@@ -1,5 +1,4 @@
 import re
-import sys
 
 def is_valid_RFC(email):
     # determine whether invalid start of string (.. is illegal)
