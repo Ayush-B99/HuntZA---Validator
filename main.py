@@ -1,6 +1,7 @@
 import re
 import time
 import threading
+import unicodedata
 from concurrent.futures import ThreadPoolExecutor
 def is_valid(email: str) -> bool:
     if ("@" not in email):
@@ -13,6 +14,10 @@ def is_valid(email: str) -> bool:
     if not at_sign or not domain:
         return False
 
+    local = unicodedata.normalize("NFC", local)
+    domain = normalize_domain(domain)
+    email = local + "@" + domain
+
     if domain.startswith("[") and domain.endswith("]"):
         return bool(local) and is_valid_local(local) and is_valid_ip_literal(domain)
 
@@ -20,9 +25,13 @@ def is_valid(email: str) -> bool:
         return False
 
     return is_valid_idna(domain)
+def normalize_domain(domain):
+    for sep in ("\u3002", "\uff0e", "\uff61"):
+        domain = domain.replace(sep, ".")
+    return unicodedata.normalize("NFC", domain)
 def is_valid_RFC(email):
     # determine whether invalid start of string (.. is illegal)
-    no_dot_chars = r'[\w_%+-]'
+    no_dot_chars = r"[\w!#$%&'*+/=?^_`{|}~-]"
     unquoted_local =  rf'{no_dot_chars}+(?:\.{no_dot_chars}+)*'
     
     # if wrapped in "" not as strict by RFC but it must end in " or it is illegal
@@ -84,7 +93,7 @@ def is_valid_email(email):
 def is_valid_local(local):
     if len(local.encode("utf-8")) > 64:
         return False
-    unquoted = r"[\w_%+-]+(?:\.[\w_%+-]+)*"
+    unquoted = r"[\w!#$%&'*+/=?^_`{|}~-]+(?:\.[\w!#$%&'*+/=?^_`{|}~-]+)*"
     quoted = r'"(?:[^"\\]|\\.)*"'
     return bool(re.match(rf"^(?:{unquoted}|{quoted})$", local, re.UNICODE))
 
