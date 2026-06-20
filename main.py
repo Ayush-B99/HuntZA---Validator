@@ -1,4 +1,7 @@
 import re
+import time
+import threading
+from concurrent.futures import ThreadPoolExecutor
 def is_valid(email: str) -> bool:
     if ("@" not in email):
         return False
@@ -253,6 +256,42 @@ def punycode_encode(label):
         return "".join(out)
     except Exception:
         return None
+class RateLimiter:
+    def __init__(self, max_calls=5, period=1.0):
+        self.max_calls = max_calls
+        self.period = period
+        self.rate = max_calls / period
+        self._buckets = {}
+        self._lock = threading.Lock()
+
+    def allow(self, key):
+        now = time.monotonic()
+        with self._lock:
+            tokens, last = self._buckets.get(key, (self.max_calls, now))
+            tokens = min(self.max_calls, tokens + (now - last) * self.rate)
+            if tokens >= 1:
+                self._buckets[key] = (tokens - 1, now)
+                return True
+            self._buckets[key] = (tokens, now)
+            return False
+
+
+rate_limiter = RateLimiter()
+
+
+def validate(email, user="global"):
+    if not rate_limiter.allow(user):
+        return None
+    return is_valid(email)
+
+
+def validate_many(items, max_workers=8):
+    def work(item):
+        if isinstance(item, tuple):
+            return validate(item[1], item[0])
+        return is_valid(item)
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        return list(pool.map(work, items))
 if __name__ == "__main__":
     test_cases = [
         ("test@example.com", True),
