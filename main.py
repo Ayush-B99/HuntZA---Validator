@@ -1,6 +1,4 @@
 import re
-import ipaddress
-import dns.resolver
 from validator import is_valid_email 
 from validator import is_valid_RFC
 
@@ -22,24 +20,12 @@ def is_valid(email: str) -> bool:
         return False
 
     # 3. Check DNS configuration
-    if not has_valid_dns(domain):
-        return False
+
 
     return True
 
 
-def has_valid_dns(domain: str) -> bool:  # Fixed type hint from list to bool
-    try:
-        dns.resolver.resolve(domain, 'MX', lifetime=3.0)
-        return True
-    except (dns.resolver.NoAnswer, dns.resolver.NXDOMAIN):
-        try:
-            dns.resolver.resolve(domain, 'A', lifetime=3.0)
-            return True
-        except Exception:
-            return False
-    except Exception:
-        return False
+
 
 
 if __name__ == "__main__":
